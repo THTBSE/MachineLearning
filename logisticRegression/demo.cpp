@@ -5,7 +5,8 @@ int main()
 	logisticRegression lr;
 	lr.loadDataSet();
 
-	auto w = lr.gradAscend();
+	lr.weights = lr.gradAscend();
+	lr.testClassify();
 	while (true)
 	{
 

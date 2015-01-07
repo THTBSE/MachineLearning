@@ -47,3 +47,20 @@ logisticRegression::gradAscend()
 	}
 	return weights;
 }
+
+void
+logisticRegression::testClassify()
+{
+	int miss = 0; 
+	float total = 100;
+	for (int i = 0; i < 100; i++)
+	{
+		auto h = sigmoid((data.GetRow(i) * weights)[0]);
+		if (fabs(label[i] - h) > 0.5)
+		{
+			miss++;
+		}
+	}
+	float rate = (float)miss / total;
+	printf("The error rate is : %f", rate);
+}
