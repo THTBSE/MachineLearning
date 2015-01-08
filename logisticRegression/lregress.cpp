@@ -1,59 +1,93 @@
 #include "lregress.h"
 
-double 
-logisticRegression::sigmoid(double z)
+template <unsigned M, unsigned N>
+double logisticRegression<M,N>::sigmoid(double z)
 {
 	return 1 / (1 + exp(-z));
 }
 
-void
-logisticRegression::loadDataSet()
+template <unsigned M, unsigned N>
+void logisticRegression<M, N>::loadDataSet()
 {
-	FILE *fp;
-	fopen_s(&fp, "logisticRegression\\testSet.txt", "r");
-	float x0, x1, y0;
-	int rowNumber = 0;
-	while (fscanf_s(fp, "%f %f %f", &x0,&x1,&y0) != EOF)
+	ifstream input("logisticRegression\\horseColicTraining.txt");
+	for (int i = 0; i < M; i++)
 	{
-		Vector3<double> x(1.0, x0, x1);
-		Vector<1, double> y;
-		y[0] = y0;
-		data.SetRow(rowNumber, x);
-		label.SetRow(rowNumber,y);
-		rowNumber++;
+		data(i, 0) = 1.0;
+		for (int j = 1; j < N ; j++)
+		{
+			input >> data(i,j);
+		}
+		input >> label(i, 0);
+
 	}
-	fclose(fp);
+	input.close();
+	//FILE *fp;
+	//fopen_s(&fp, "logisticRegression\\testSet.txt", "r");
+	//float x0, x1, y0;
+	//int rowNumber = 0;
+	//while (fscanf_s(fp, "%f %f %f", &x0,&x1,&y0) != EOF && rowNumber < M)
+	//{
+	//	Vector3<double> x(1.0, x0, x1);
+	//	Vector<1, double> y;
+	//	y[0] = y0;
+	//	data.SetRow(rowNumber, x);
+	//	label.SetRow(rowNumber,y);
+	//	rowNumber++;
+	//}
+	//fclose(fp);
 }
 
-Matrix<3, 1, double> 
-logisticRegression::gradAscend()
+template <unsigned M, unsigned N>
+Matrix<N, 1, double> logisticRegression<M, N>::gradAscend()
 {
-	Matrix<3, 1, double> weights;
-	weights.SetCol(0, Vector3<double>(1.0, 1.0, 1.0));
+	Matrix<N, 1, double> weight;
+	Vector<N, double> initial;
+	initial.MakeOne();
+	weight.SetCol(0, initial);
 
 	double alpha = 0.001;
 	int maxCycles = 500;
 
 	for (int i = 0; i < 500; i++)
 	{
-		Matrix<100, 1, double> h;
-		for (int j = 0; j < 100; j++)
+		Matrix<M, 1, double> h;
+		for (int j = 0; j < M; j++)
 		{
-			h[j] = sigmoid((data.GetRow(j) * weights)[0]);
+			h[j] = sigmoid((data.GetRow(j) * weight)[0]);
 		}
-		Matrix<100, 1, double> error;
+		Matrix<M, 1, double> error;
 		error = label - h;
-		weights = weights + alpha * Transpose(data) * error;
+		weight = weight + alpha * Transpose(data) * error;
 	}
-	return weights;
+	return weight;
 }
 
-void
-logisticRegression::testClassify()
+template <unsigned M, unsigned N>
+Matrix<N, 1, double> logisticRegression<M, N>::stocGradAscend(int maxCycles)
+{
+	Matrix<N, 1, double> weight;
+	Vector<N, double> initial;
+	initial.MakeOne();
+	weight.SetCol(0, initial);
+	Matrix<N, 1, double> xi;
+	double alpha = 0.001;
+
+	for (int t = 0; t < maxCycles; t++)
+		for (int i = 0; i < M; i++)
+		{
+			xi.SetCol(0, data.GetRow(i));
+			auto h = sigmoid((data.GetRow(i)*weight)[0]);
+			weight = weight + alpha * (label[i] - h) * xi;
+		}
+	return weight;
+}
+
+template <unsigned M, unsigned N>
+void logisticRegression<M, N>::testClassify()
 {
 	int miss = 0; 
-	float total = 100;
-	for (int i = 0; i < 100; i++)
+	float total = M;
+	for (int i = 0; i < M; i++)
 	{
 		auto h = sigmoid((data.GetRow(i) * weights)[0]);
 		if (fabs(label[i] - h) > 0.5)
