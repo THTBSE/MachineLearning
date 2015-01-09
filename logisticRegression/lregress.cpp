@@ -70,7 +70,7 @@ Matrix<N, 1, double> logisticRegression<M, N>::stocGradAscend(int maxCycles)
 	initial.MakeOne();
 	weight.SetCol(0, initial);
 	Matrix<N, 1, double> xi;
-	double alpha = 0.001;
+	double alpha = 0.1;
 
 	for (int t = 0; t < maxCycles; t++)
 		for (int i = 0; i < M; i++)
@@ -78,6 +78,7 @@ Matrix<N, 1, double> logisticRegression<M, N>::stocGradAscend(int maxCycles)
 			xi.SetCol(0, data.GetRow(i));
 			auto h = sigmoid((data.GetRow(i)*weight)[0]);
 			weight = weight + alpha * (label[i] - h) * xi;
+			alpha *= 0.95;
 		}
 	return weight;
 }
