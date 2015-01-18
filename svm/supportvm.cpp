@@ -31,7 +31,7 @@ void svmClassifier<M, N>::svmTrain(int c, double tol, int ktype, double sig)
 		{
 			Kernel(i, j) = kernelTransfer(i, j);
 		}
-		errorsCache[i] = -label[i];
+		errorsCache[i] = 0;
 	}
 
 	smoAlgorithm();
@@ -62,7 +62,7 @@ void svmClassifier<M, N>::testSet()
 	input.close();
 	double rate = (double)errors / (double)M;
 
-	int see = 1;
+	printf("the error rate is : %.5f", rate);
 }
 
 template <unsigned M, unsigned N>
@@ -102,7 +102,8 @@ int svmClassifier<M, N>::examineExample(int i1)
 {
 	auto y1 = label[i1];
 	auto alpha1 = alpha[i1];
-	auto E1 = calcEk(i1);
+	double E1;
+	E1 = calcEk(i1);
 	auto r1 = E1 * y1;
 
 	//if violate KKT condition 
@@ -143,15 +144,16 @@ int svmClassifier<M, N>::examineExample(int i1)
 
 			i2 = i;
 			E2 = calcEk(i2);
+
 			if (takeStep(i1, i2, E1, E2))
 				return 1;
 			break;
 		}
-
 	}
 	return 0;
 }
 
+//for test data
 template <unsigned M, unsigned N>
 int svmClassifier<M, N>::svmPredict(const Vector<N, double> &x)
 {
@@ -170,6 +172,7 @@ int svmClassifier<M, N>::svmPredict(const Vector<N, double> &x)
 		return -1;
 }
 
+//for train data
 template <unsigned M, unsigned N>
 int svmClassifier<M, N>::svmOutput(int i)
 {
@@ -188,6 +191,7 @@ int svmClassifier<M, N>::svmOutput(int i)
 	else
 		return -1;
 }
+
 template <unsigned M, unsigned N>
 double svmClassifier<M, N>::calcEk(int i)
 {
