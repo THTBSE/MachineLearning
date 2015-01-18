@@ -7,4 +7,6 @@ int main()
 	svm.loadDataSet();
 	svm.svmTrain(200, 0.0001, SVM_RBF);
 	svm.testSet();
+
+	
 }
