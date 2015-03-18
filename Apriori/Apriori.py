@@ -28,24 +28,26 @@ class Apriori():
 				FISSupport.append(s)
 		return FIS,FISSupport
 
-	def UpdateCk(self,Ck):
+	def UpdateCk(self,Ck,k):
 		CkPlus = []
 		SetSize = len(Ck)
 		for i in range(SetSize):
 			for j in range(i+1,SetSize):
-				if len(Ck[i]) == 1:
-					CkPlus.append(Ck[i].union(Ck[j]))
-				elif list(Ck[i])[:-1] == list(Ck[j])[:-1]:
-					CkPlus.append(Ck[i].union(Ck[j]))
+				if list(Ck[i])[:k-1] == list(Ck[j])[:k-1]:
+					mergeSet = Ck[i] | Ck[j]
+				if mergeSet and (not mergeSet in CkPlus):
+					CkPlus.append(mergeSet)
 		return CkPlus
 
 	def GetFIS(self,data):
 		Ck = self.CreateC1(data)
+		k = 0
 		while True:
 			FIS,Support = self.ScanForFIS(Ck,data)
 			self.FIS.append(FIS)
 			self.Support.update(dict(zip(FIS,Support)))
-			Ck = self.UpdateCk(FIS)        #find next Ck from frequent item sets 
+			Ck = self.UpdateCk(FIS,k)        #find next Ck from frequent item sets 
+			k += 1
 			if not Ck:
 				break
 		return self
@@ -54,12 +56,14 @@ class Apriori():
 		subSets = []
 		Ck = [frozenset([item]) for item in freqSet]
 		subSets.extend(Ck)
+		k = 0
 		while True:
-			Ck = self.UpdateCk(Ck)
+			Ck = self.UpdateCk(Ck,k)
 			if len(Ck) != 1:
 				subSets.extend(Ck)
 			else:
 				break
+			k += 1
 		return subSets
 
 	def AssociatedRules(self):
