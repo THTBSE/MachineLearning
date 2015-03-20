@@ -1,4 +1,6 @@
-
+"""
+@author:Frank
+"""
 class TreeNode():
 	def __init__(self,item,parent=None,count=1):
 		self.item = item
@@ -17,7 +19,6 @@ class fpGrowth():
 		self.fpTree = None
 		self.headerTable = {}
 		self.minSupport = minSupport
-		self.sortedItems = []
 		self.headerPath = {}
 
 	#fixed the order of items in dataSet
@@ -40,8 +41,6 @@ class fpGrowth():
 			items = [(item,headerTable[item]) for item in dataSet[i] if item in headerTable]
 			items = sorted(items,key=lambda x:x[1],reverse=True)
 			dataSet[i] = [item[0] for item in items]
-		sortedItems = sorted(headerTable.items(),key=lambda x:x[1],reverse=True)
-		return sortedItems, headerTable
 
 	def LinkNodes(self,root,prevNode=None):
 		if root.item == 'root':
@@ -56,9 +55,7 @@ class fpGrowth():
 			self.LinkNodes(root.children[ckey],prevNode)
 
 	def CreateTree(self,dataSet):
-		dataSet = self.__InitializeSet(dataSet)
 		self.fpTree = TreeNode('root')
-		self.sortedItems, self.headerTable = self.SortFilterItems(dataSet)
 		#print dataSet
 		for Set in dataSet:
 			currTree = self.fpTree
@@ -68,10 +65,10 @@ class fpGrowth():
 				else:
 					currTree.children[item] = TreeNode(item,currTree)
 				currTree = currTree.children[item]
-
 		self.LinkNodes(self.fpTree)
 
 	#Set in cpb ---> ['x','y','z',5] 
+	#Set == 1 represents the prefix itself ,just not create cfp tree.
 	def CreateCFPTree(self,cpb):
 		cfpTree = TreeNode('root')
 		for Set in cpb:
@@ -140,18 +137,18 @@ class fpGrowth():
 				cpbs[k].append(freqSet)
 		return cpbs
 
-	def Pivot(self,cpbs):
+	def fit(self,dataSet):
+		dataSet = self.__InitializeSet(dataSet)
+		self.SortFilterItems(dataSet)
+		self.CreateTree(dataSet)
+		cpbs = self.RecallPathForCPB()
 		allSets = []
 		for k in cpbs:
-		#	print k,cpbs[k]
-		#	print '----------'
 			cfpT = self.CreateCFPTree(cpbs[k])
 			freqSets = {frozenset([k]):reduce(lambda x,y:x+y[-1],cpbs[k],0)}
 			self.GetFreqSet(cfpT,freqSets)
 			allSets.append(freqSets)
-		for fqs in allSets:
-			for k in fqs:
-				print k
+		return allSets
 
 def loadSimpDat():
     simpDat = [['r', 'z', 'h', 'j', 'p'],
@@ -162,15 +159,11 @@ def loadSimpDat():
                ['y', 'z', 'x', 'e', 'q', 's', 't', 'm']]
     return simpDat
 
-#dataSet = loadSimpDat()
-dataSet = [line.split() for line in open('kosarak.dat','r')]
-fpg = fpGrowth(100000)
-fpg.CreateTree(dataSet)
-#fpg.fpTree.display()
-cpbs = fpg.RecallPathForCPB()
-
-fpg.Pivot(cpbs)
-#cfpT = fpg.CreateCFPTree(cpb)
-#freqSets = {frozenset(['t']):reduce(lambda x,y:x[1]+y[1],cpb)}
-#fpg.GetFreqSet(cfpT,freqSets)
-#print freqSets
+if __name__ == '__main__':
+	#dataSet = loadSimpDat()
+	dataSet = [line.split() for line in open('kosarak.dat','r')]
+	fpg = fpGrowth(150000)
+	freqSets = fpg.fit(dataSet)
+	for group in freqSets:
+		for k in group:
+			print k,group[k]
