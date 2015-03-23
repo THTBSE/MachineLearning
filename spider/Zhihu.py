@@ -7,6 +7,7 @@ import time
 import bs4
 from bs4 import BeautifulSoup
 
+followeesURL = None
 session = None
 cookies = {}
 currTime = time.time()
@@ -17,6 +18,8 @@ def CreateSession():
 
     global session
     global cookies
+    global followeesURL
+
     cf = ConfigParser.ConfigParser()
     cf.read("config.ini")
     
@@ -28,6 +31,8 @@ def CreateSession():
     cookies = dict(cookies)
     #print cookies
     
+    followeesURL = cf.get("homepage","followees")
+
     s = requests.session()
     login_data = {'email': email, 'password': password}
     header = {
@@ -52,16 +57,19 @@ def CreateSession():
             raise ValueError("请填写config.ini文件中的cookies项.")
     session = s
 
+
+
 def GetFolloweesLists():
 	global cookies
 	global session
-
-	urlList = []
-	baseUrl = 'http://www.zhihu.com/people/heap_frank/followees'
+	global followeesURL
 
 	if session == None:
 		CreateSession()
 	s = session
+
+	urlList = []
+	baseUrl = followeesURL
 
 	has_cookies = False
 	for k in cookies:
@@ -77,7 +85,12 @@ def GetFolloweesLists():
 	post_url = "http://www.zhihu.com/node/ProfileFolloweesListV2"
 	hash_id = re.findall("hash_id&quot;: &quot;(.*)&quot;},", r.text)[0]
 
-	followeesCount = 88
+	user_name = re.match(r'http://www.zhihu.com/people/(.+)/followees',followeesURL).group(1)
+	chrefval = '/people/' + user_name + '/followees'
+	countTag = soup.find('a',attrs={'href':chrefval})
+	followeesCount = int(countTag.strong.string.encode('utf-8'))
+
+
 	for i in range((followeesCount - 1) / 20 + 1):
 		if i == 0:
 			pl = soup.find_all('a',class_='zm-item-link-avatar')
