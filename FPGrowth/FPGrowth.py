@@ -160,10 +160,36 @@ def loadSimpDat():
     return simpDat
 
 if __name__ == '__main__':
+	dataSet = [map(int,line.split()) for line in open('dataSet.txt','r')]
+
+	#newsCount = {}
+
+	#for data in dataSet:
+	#	for n in data:
+	#		if n in newsCount:
+	#			newsCount[n] += 1
+	#		else:
+	#			newsCount[n] = 1
+
+	#rank = sorted(newsCount.items(),key=lambda x:x[1],reverse=True)
+	#url = [line.rstrip().split('\t')[1] for line in open('urlTable.txt','r')]
+
+	#f = open('Result.txt','w')
+	#f.write('heap_Frank知乎当日十大动态\n')
+
+	#for i in range(1,11):
+	#	f.write('No.{0}\t 热度{1}  URL:{2}\n'.format(i,rank[i-1][1],url[rank[i-1][0]]))
+	#f.close()
+
+	#for r in rank[10:]:
+	#	print '热度{0}, URL:{1}'.format(r[1],url[r[0]])
+
+
 	#dataSet = loadSimpDat()
-	dataSet = [line.split() for line in open('kosarak.dat','r')]
-	fpg = fpGrowth(150000)
+	#dataSet = [line.split() for line in open('kosarak.dat','r')]
+	fpg = fpGrowth(4)
 	freqSets = fpg.fit(dataSet)
 	for group in freqSets:
 		for k in group:
-			print k,group[k]
+			print '{0} Support-->{1}'.format(k,group[k])
+
