@@ -8,6 +8,7 @@ import time
 imgCount = 200
 keyword = None
 pattern = re.compile(r'^a.+\["(\w+)"\]')
+jsonEncoder = json.JSONEncoder()
 
 def save_img(imgURL,filePath,imgName,imgSuffix):
 	img = requests.get(imgURL)
@@ -64,14 +65,20 @@ def get_base_info(text):
 	return info
 
 def get_img_info(jstring):
-	images = []
-	jarray = json.loads(jstring)
+	global jsonEncoder
+	images = set([])
+	jarray = None
+	try:
+		jarray = json.loads(jstring)
+	except TypeError, e:
+		return images
 	for obj in jarray:
 		img = {}
 		try:
 			img['key'] = obj['file']['key'].encode('utf-8')
 			img['type'] = obj['file']['type'][6:].encode('utf-8')
-			images.append(img)
+			js = jsonEncoder.encode(img)
+			images.add(js)
 		except KeyError, e:
 			print 'KeyError'
 	return images
@@ -98,11 +105,11 @@ def main():
 	print imgCount
 	currImgCount = 0
 	jstring = info['jstring']
-	imgs = []
+	imgs = set([])
 	page = 1
 	while (currImgCount < imgCount):
 		images = get_img_info(jstring)
-		imgs.extend(images)
+		imgs = imgs.union(images)
 
 		currImgCount = len(imgs)
 		print 'get {0} images...'.format(currImgCount)
@@ -114,8 +121,11 @@ def main():
 		jstring = get_pins_jstring(res.text.split('\n'))
 
 	save_count = 0
+	imgs = list(imgs)
 	for img in imgs[:imgCount]:
-		save_img(info['imgHosts']+'/'+img['key'],savePath,img['key'],img['type'])
+		img = json.loads(img)
+		imgKey = img['key'].encode('utf-8')
+		save_img(info['imgHosts']+'/'+imgKey,savePath,imgKey,img['type'].encode('utf-8'))
 		save_count += 1
 		print 'save {0} imgs...'.format(save_count)
 		sys.stdout.flush()
