@@ -1,6 +1,3 @@
-from dataset import Dataset
-from sklearn.metrics import mean_squared_error
-import sys
 
 class Node():
 	def __init__(self):
@@ -45,56 +42,56 @@ class RegressionTree():
 		else:
 			return value == split_value
 
-	def _construct_node(self,dataset,row_index,depth):
+	def _get_fields_type(self,x):
+		"""get every field type of an instance x"""
+		fields_type = map(lambda xi:self.real_type if isinstance(xi,float) else self.unreal_type,x)
+		return fields_type
+
+	def _get_column(self,X,col_index):
+		col = [row[col_index] for row in X]
+		return col
+
+	def _construct_node(self,X,y,depth):
 		"""construct node recursively"""
 		if depth > self.max_depth:
 			return None
-
-		instances = dataset.get_instances(row_index)
-		y = dataset.get_labels(row_index)
 
 		square_error = self._square_error(y)
 
 		best_split_index = None
 		best_split_value = None
 		best_split_type = None
-		best_left_index = None
-		best_right_index = None
-		minimum_square_error = 2 ** 31.0
+		best_left_samples = None
+		best_right_samples = None
+		minimum_square_error = float(2**31)
 
-		value_type = None
-		for col_index,field_type in enumerate(dataset.fields_type):
-			if dataset.is_real_type(col_index):
-				value_type = self.real_type
-			else:
-				value_type = self.unreal_type
-
-			curr_col = dataset.get_column(instances,col_index)
-			split_values = self._get_split_values(curr_col,value_type)
+		#scan for best split feature and point
+		fields_type = self._get_fields_type(X[0])
+		for col_index,field_type in enumerate(fields_type):
+			curr_col = self._get_column(X,col_index)
+			split_values = self._get_split_values(curr_col,field_type)
 			for split_value in split_values:
-				left_index = []
-				right_index = []
+				left_samples = {'X':[],'y':[]}
+				right_samples = {'X':[],'y':[]}
 
-				for row in row_index:
-					x_instance = dataset.get_instance(row)
-
-					if self._is_left(x_instance[col_index],split_value,value_type):
-						left_index.append(row)
+				for x,yi in zip(X,y):
+					if self._is_left(x[col_index],split_value,field_type):
+						left_samples['X'].append(x)
+						left_samples['y'].append(yi)
 					else:
-						right_index.append(row)
+						right_samples['X'].append(x)
+						right_samples['y'].append(yi)
 
-				left_square_error = self._square_error(dataset.get_labels(left_index))
-				right_square_error = self._square_error(dataset.get_labels(right_index))
+				left_square_error = self._square_error(left_samples['y'])
+				right_square_error = self._square_error(right_samples['y'])
 				sum_left_right_se = left_square_error + right_square_error
-				if sum_left_right_se >= square_error:
-					continue
-				if sum_left_right_se < minimum_square_error:
+				if sum_left_right_se < square_error and sum_left_right_se < minimum_square_error:
 					minimum_square_error = sum_left_right_se
 					best_split_index = col_index
 					best_split_value = split_value
-					best_split_type = value_type
-					best_left_index = left_index
-					best_right_index = right_index
+					best_split_type = field_type
+					best_left_samples = left_samples
+					best_right_samples = right_samples
 
 		node = Node()
 		if best_split_index is not None:
@@ -102,19 +99,16 @@ class RegressionTree():
 			node.split_value = best_split_value
 			node.split_value_type = best_split_type
 
-			node.left_node = self._construct_node(dataset,best_left_index,depth+1)
-			node.right_node = self._construct_node(dataset,best_right_index,depth+1)
-		
+			node.left_node = self._construct_node(best_left_samples['X'],best_left_samples['y'],depth+1)
+			node.right_node = self._construct_node(best_right_samples['X'],best_right_samples['y'],depth+1)
+
 		if (node.left_node is None) and (node.right_node is None):
-			node.leaf_value = sum(y) / float(len(y))
-			print 'leaf node depth:{0}, leaf value:{1}'.format(depth,node.leaf_value)
-			sys.stdout.flush() 
+			node.leaf_value = sum(y)/float(len(y))
 
 		return node
 
-	def fit(self,dataset):
-		row,col = dataset.shape
-		self.root = self._construct_node(dataset,range(row),0)
+	def fit(self,X,y):
+		self.root = self._construct_node(X,y,0)
 
 	def _predict(self,node,x):
 		if node.leaf_value is not None:
@@ -131,44 +125,21 @@ class RegressionTree():
 				return self._predict(node.right_node,x)
 
 	def predict(self,x):
+		"""predict the target value of an instance x"""
 		return self._predict(self.root,x)
 
 if __name__ == '__main__':
-	#test split function
-	# regTree = RegressionTree(7)
-
-	# real_value = [1.1,2.2,3.3,5.5,18.2,6.6,7.7]
-	# cate_value = ['a','b','c','d','e','f','g']
-
-	# real_split_value = regTree._get_split_values(real_value,regTree.real_type)
-	# cate_split_value = regTree._get_split_values(cate_value,regTree.unreal_type)
-
-	# print real_split_value
-	# print cate_split_value
-	
 	from sklearn.datasets import make_friedman1
+	from sklearn.metrics import mean_squared_error
+
 	X, y = make_friedman1(n_samples=1200, random_state=0, noise=1.0)
 	X_train, X_test = X[:200], X[200:]
 	y_train, y_test = y[:200], y[200:]
-	dataset = Dataset()
-	dataset.load_X_y(X_train,y_train)
 
-	print dataset.fields_type
-	sys.stdout.flush()
+	regTree = RegressionTree(max_depth=3)
+	regTree.fit(X_train,y_train)
 
-	regTree = RegressionTree(1)
-	regTree.fit(dataset)
+	pred = [regTree.predict(x) for x in X_test]
 
-	testset = Dataset()
-	testset.load_X_y(X_test,y_test)
-	pred = []
-	for x in testset.data:
-		y = regTree.predict(x)
-		pred.append(y)
-
-	mse = mean_squared_error(testset.y,pred)
+	mse = mean_squared_error(y_test,pred)
 	print 'mean squared error is :{0}'.format(mse)
-	f = open('pred.csv','w')
-	for y in pred:
-		f.write('{0}\n'.format(y))
-	f.close()

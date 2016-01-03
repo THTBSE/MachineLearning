@@ -1,5 +1,5 @@
 from tree import RegressionTree
-from dataset import Dataset
+from random import Random
 
 class LeastSquare():
 	def loss(self,y,fx):
@@ -13,13 +13,15 @@ class LeastSquare():
 
 
 class GBDT():
-	def __init__(self,n_estimators,learning_rate,max_depth,loss='ls'):
+	def __init__(self,n_estimators,learning_rate,max_depth,random_state,loss='ls',eta=0.5):
 		self.n_estimators = n_estimators
 		self.learning_rate = learning_rate
 		self.max_depth = max_depth
 		self.trees = []
 		self.loss = loss
 		self.loss_function = self._get_loss_function(self.loss)
+		self.rng = Random(random_state)
+		self.eta = eta
 
 	def _get_loss_function(self,loss):
 		if loss == 'ls':
@@ -31,9 +33,17 @@ class GBDT():
 			fx = [mean for yi in y]
 			return fx
 
-	def fit(self,X,y):
+	def _subsampling(self,X,y):
+		"""subsampling from X"""
+		size = len(X)
+		sample_num = int(self.eta * size)
+		sample_index = self.rng.sample(range(size),sample_num)
+		sub_X = [X[index] for index in sample_index]
+		sub_y = [y[index] for index in sample_index]
+		return sub_X,sub_y
 
-		#fx = self._init_fx(y,self.loss)
+
+	def fit(self,X,y):
 		fx = [0 for yi in y]
 
 		for m in range(self.n_estimators):
@@ -41,11 +51,9 @@ class GBDT():
 			print 'epoch {0} ,loss:{1}'.format(m,Loss)
 
 			rm = self.loss_function.negative_gradient(y,fx)
-
-			dataset = Dataset()
-			dataset.load_X_y(X,rm)
 			tree = RegressionTree(self.max_depth)
-			tree.fit(dataset)
+			sub_X,sub_rm = self._subsampling(X,rm)
+			tree.fit(sub_X,sub_rm)
 			self.trees.append(tree)
 
 			gamma_m = [tree.predict(x) for x in X]
@@ -53,7 +61,7 @@ class GBDT():
 
 	def predict(self,x):
 		pred = [tree.predict(x) for tree in self.trees]
-		return sum(pred)*self.learning_rate
+		return sum(pred) * self.learning_rate
 
 
 if __name__ == '__main__':
@@ -63,18 +71,16 @@ if __name__ == '__main__':
 	X_train, X_test = X[:200], X[200:]
 	y_train, y_test = y[:200], y[200:]
 
-	gbdt = GBDT(n_estimators=100,learning_rate=0.1,max_depth=1)
+	gbdt = GBDT(n_estimators=100,learning_rate=0.1,max_depth=1,random_state=0,loss='ls',eta=0.5)
 	gbdt.fit(X_train,y_train)
 
-	pred = []
-	for x in X_test:
-		y = gbdt.predict(x)
-		pred.append(y)
+	pred = [gbdt.predict(x) for x in X_test]
 
 	mse = mean_squared_error(y_test,pred)
-	print 'mean squared error is :{0}'.format(mse)
+	print 'our classifier\'s mean squared error is :{0}'.format(mse)
 
 	from sklearn.ensemble import GradientBoostingRegressor
 	est = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1,max_depth=1, random_state=0, loss='ls').fit(X_train, y_train)
-	print mean_squared_error(y_test, est.predict(X_test))
+	sklearn_mse = mean_squared_error(y_test, est.predict(X_test))
+	print 'sklearn\'s classifier\'s mean squared error is :{0}'.format(sklearn_mse)
 
