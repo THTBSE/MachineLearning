@@ -5,8 +5,7 @@ import random
 
 class LogisticRegression():
 	def __init__(self,C,learning_rate,eta0,eplison,random_state=0,p=0.95,shuffle=True,max_iter=100):
-		self.weights = None
-		self.intercept = 0
+		self.weights = None #w[0] is bias
 		self.C = C
 		self.learning_rate = learning_rate
 		self.eta0 = eta0
@@ -16,6 +15,8 @@ class LogisticRegression():
 		self.p = p
 		self.shuffle = shuffle
 		self.rng = random.Random(random_state)
+		self.E_grad_square = 0
+		self.E_deltaw_square = 0
 
 	def _sigmoid(self,z):
 		return (1.0 / (1 + math.exp(-z)))
@@ -42,10 +43,27 @@ class LogisticRegression():
 		return X,y
 
 	def fit(self,X,y):
+		dim = len(X[0])
+		self.weights = [0 for i in range(dim+1)] #x0=1,w[0]=bias
+		x0 = 1
 		for i in range(self.max_iter):
 			X,y = self._shuffle(X,y)
 			for xi,yi in zip(X,y):
-				z = 
+				xi = [1] + list(xi) #let x[0] = 1
+				z = sum([wj * xij for wj,xij in zip(self.weights,xi)])
+				pred = self._sigmoid(z)
+				residual = pred - yi
+				gradient = [residual * xij + self.C * wj for xij,wj in zip(xi,self.weights)]
+
+				if self.learning_rate == 'adadelta':
+					delta_w,self.E_grad_square,self.E_deltaw_square
+					 = self._adadelta(self.p,self.E_grad_square,self.E_deltaw_square,gradient)
+				else:
+					delta_w = [-self.eta0*gj for gj in gradient]
+					self.eta0 *= self.p
+
+				self.weights = [wj+delta_wj for wj,delta_wj in zip(self.weights,delta_w)]
+
 
 	def predict(self,dataSet):
 		if not isinstance(dataSet,np.ndarray):
