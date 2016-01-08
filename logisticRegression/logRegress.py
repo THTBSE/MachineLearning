@@ -1,14 +1,51 @@
 import numpy as np 
 import pandas as pd 
+import math
+import random
 
-class LogisticRegressor():
-	def __init__(self,maxEpoch = 100, alpha = 0.1):
+class LogisticRegression():
+	def __init__(self,C,learning_rate,eta0,eplison,random_state=0,p=0.95,shuffle=True,max_iter=100):
 		self.weights = None
+		self.intercept = 0
+		self.C = C
+		self.learning_rate = learning_rate
+		self.eta0 = eta0
 		self.alpha = alpha
-		self.epoch = maxEpoch
+		self.max_iter = max_iter
+		self.eplison = eplison
+		self.p = p
+		self.shuffle = shuffle
+		self.rng = random.Random(random_state)
 
-	def sigmoid(self,z):
-		return (1.0 / (1 + np.exp(-z)))
+	def _sigmoid(self,z):
+		return (1.0 / (1 + math.exp(-z)))
+
+	def _rms(self,z,eps=1e-6):
+		return math.sqrt(z+eps)
+
+	def _adadelta(self,p,E_grad_square,E_deltaw_square,gradient):
+		"""AdaDelta algorithm for calculating delta_w \
+		where deltaa_w in formula:w[t+1] = w[t] + delta_w"""
+		grad_square = sum([g*g for g in gradient])
+		E_grad_square = p * E_grad_square + (1 - p) * grad_square
+		coefficient = - self._rms(E_deltaw_square) / self._rms(E_grad_square) 
+		delta_w = [coefficient * gi for gi in gradient]
+		delta_w_square = sum([w*w for w in delta_w])
+		E_deltaw_square = p * E_deltaw_square + (1 - p) * delta_w_square
+		return delta_w,E_grad_square,E_deltaw_square 
+
+	def _shuffle(self,X,y):
+		shuffle_index = range(len(X))
+		shuffle_index = self.rng.sample(shuffle_index,len(shuffle_index))
+		X = [X[index] for index in shuffle_index]
+		y = [y[index] for index in shuffle_index]
+		return X,y
+
+	def fit(self,X,y):
+		for i in range(self.max_iter):
+			X,y = self._shuffle(X,y)
+			for xi,yi in zip(X,y):
+				z = 
 
 	def predict(self,dataSet):
 		if not isinstance(dataSet,np.ndarray):
