@@ -1,5 +1,5 @@
 from collections import defaultdict
-import random,math
+import random,math,sys
 
 def corpus_generator(file_path):
 	for line in open(file_path):
@@ -51,17 +51,12 @@ class plsa():
 			# # # e step
 			for i in xrange(doc_num):
 				for w in self.n_d_w[i]:
-					p_d_w = 0
 					dw = (i,w)
-					numerator = []
-					for k in range(self.topic_num):
-						numerator.append(self.p_d_z[i][k] * self.p_z_w[k][w])
-						p_d_w += numerator[-1]
-					p_dw_z[dw] = [0.01 for k in range(self.topic_num)]
-					for k in range(self.topic_num):
-						p_dw_z[dw][k] = numerator[k] / p_d_w
+					numerator = [self.p_d_z[i][k]*self.p_z_w[k][w] for k in range(self.topic_num)]
+					p_d_w = sum(numerator)
+					p_dw_z[dw] = [numerator[k] / p_d_w for k in range(self.topic_num)]
 
-			# # # m step
+			# # # m step  计算p(w|z)
 			for k in range(self.topic_num):
 				denom = 0.0
 				numerator = defaultdict(float)
@@ -76,9 +71,11 @@ class plsa():
 				for w in self.words:
 					self.p_z_w[k][w] = numerator[w] / denom
 
+			# # # 计算 p(z|d)
 			for i in xrange(doc_num):
 				denom = 0.0
 				numerator = [0.0 for k in range(self.topic_num)]
+
 				for k in range(self.topic_num):
 					for w in self.words:
 						dw = (i,w)
@@ -93,6 +90,7 @@ class plsa():
 
 			ll = self.log_likelihood()
 			print 'epoch {0} done...,log_likelihood:{1}'.format(epoch,ll)
+			sys.stdout.flush()
 
 	def print_topic_word(self,num):
 		for k in range(self.topic_num):
@@ -107,7 +105,8 @@ class plsa():
 
 if __name__ == '__main__':
 	plsa_test = plsa(5)
-	plsa_test.load_corpus('corpus1.txt')
+	plsa_test.load_corpus('corpus1')
+	print 'load corpus done'
 	plsa_test.train()
-	plsa_test.print_topic_word(5)
+	plsa_test.print_topic_word(10)
 
